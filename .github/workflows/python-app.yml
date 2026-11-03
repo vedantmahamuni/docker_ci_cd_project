@@ -1,3 +1,4 @@
+
 name: Machine Learning CI/CD
 
 on:
@@ -10,6 +11,8 @@ on:
       - main
 
 jobs:
+
+  # JOB 1: Test and Train ML Model
   test:
     name: Test and Train ML Model
     runs-on: ubuntu-latest
@@ -32,8 +35,10 @@ jobs:
         run: python train_model.py
 
       - name: Run Tests
-        run: pytest -v
+        run: python -m pytest -v
 
+
+  # JOB 2: Build Docker Image
   docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -46,6 +51,8 @@ jobs:
       - name: Build Docker Image
         run: docker build -t student-ml-api .
 
+
+  # JOB 3: Deploy Application to Render
   deploy:
     name: Deploy Application to Render
     runs-on: ubuntu-latest
@@ -65,4 +72,4 @@ jobs:
             --retry 5 \
             --retry-delay 2 \
             --request POST \
-
+            "$RENDER_DEPLOY_HOOK"
