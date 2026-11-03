@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-
-name: Student ML CI-CD Pipeline
+name: Machine Learning CI/CD
 
 on:
   push:
@@ -12,67 +10,50 @@ on:
       - main
 
 jobs:
-
-  # JOB 1: Test and Build
-  test-and-build:
-    name: Test and Build ML Application
-=======
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
-name: Python application
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-permissions:
-  contents: read
-
-jobs:
-  build:
->>>>>>> 30a8f4618ff39fc10fd501d401f531e379ea6290
-
+  test:
+    name: Test and Train ML Model
     runs-on: ubuntu-latest
 
     steps:
-<<<<<<< HEAD
-
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Train ML Model
-        run: python ml/train.py
+        run: python train_model.py
 
       - name: Run Tests
-        run: python -m pytest -v
+        run: pytest -v
+
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Build Docker Image
-        run: docker build -t student-performance-api .
+        run: docker build -t student-ml-api .
 
-
-  # JOB 2: Deploy Application
   deploy:
-    name: Deploy Application
-
-    needs: test-and-build
+    name: Deploy Application to Render
+    runs-on: ubuntu-latest
+    needs: [test, docker]
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    runs-on: ubuntu-latest
-
     steps:
-
       - name: Trigger Render Deployment
         env:
           RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
@@ -81,26 +62,7 @@ jobs:
           test -n "$RENDER_DEPLOY_HOOK"
 
           curl --fail --silent --show-error \
-            --retry 5 --retry-delay 2 \
-            -X POST "$RENDER_DEPLOY_HOOK"
-=======
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.10"
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
-      run: |
-        pytest
->>>>>>> 30a8f4618ff39fc10fd501d401f531e379ea6290
+            --retry 5 \
+            --retry-delay 2 \
+            --request POST \
+            "$RENDER_DEPLOY_HOOK"
